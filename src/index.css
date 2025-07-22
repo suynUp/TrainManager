@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+html {
+    overflow-y: scroll;
+    /* 始终显示滚动条（占位） */
+}
+
+body {
+    width: 100vw;
+    /* 视口宽度 */
+    overflow-x: hidden;
+    /* 防止水平滚动 */
+}
