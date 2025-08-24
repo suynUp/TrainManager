@@ -5,7 +5,7 @@ import UserInfo from "./UserInfo"
 import { useAtom } from "jotai"
 import { pageAtom } from "../AtomExport"
 
-export default ()=>{
+const Main = ()=>{
 
     const [currentPage , setCurrentPage] = useAtom(pageAtom)
 
@@ -18,4 +18,7 @@ export default ()=>{
     ></Header>
     {compo[currentPage]}
     </>
+
 }
+
+export default Main;

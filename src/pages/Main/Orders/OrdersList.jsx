@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, MapPin, Clock, RefreshCw, X } from 'lucide-react';
 
 const OrdersList = ({ orders, searchQuery, statusFilter, onCancelOrder, onRefundOrder }) => {

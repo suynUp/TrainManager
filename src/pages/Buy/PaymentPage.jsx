@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, CreditCard, Smartphone, Building, CheckCircle2 } from 'lucide-react';
+import { useAtom } from 'jotai';
+import { passengersAtom, priceAtom, seatsAtom, trainAtom } from '../AtomExport';
+import { useLocation } from 'wouter';
 
 const PaymentPage = ({
-  train,
-  passengers,
-  seats,
-  onBack,
-  onPaymentSuccess,
 }) => {
+  const [,setLocation] = useLocation()
+
+  const [train,] = useAtom(trainAtom)
+  const [totalPrice] = useAtom(priceAtom)
+  const [passengers] = useAtom(passengersAtom)
+  const [seats] = useAtom(seatsAtom)
+
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('alipay');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const totalPrice = seats.reduce((sum, seat) => sum + seat.price, 0);
+  useEffect(()=>{
+    console.log('passengers',passengers)
+    console.log('seats',seats)
+  },[])
 
   const paymentMethods = [
     {
@@ -44,6 +52,10 @@ const PaymentPage = ({
     },
   ];
 
+  const onBack = () => {
+    useLocation('/SeatSelection')
+  }
+
   const handlePayment = async () => {
     setIsProcessing(true);
     
@@ -54,6 +66,10 @@ const PaymentPage = ({
       onPaymentSuccess(bookingId);
     }, 3000);
   };
+
+  const onPaymentSuccess = (bookingId) =>{
+    setLocation('/BookingSuccess')
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-lg">

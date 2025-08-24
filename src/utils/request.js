@@ -1,50 +1,47 @@
+// src/utils/request.js
+import { tokenAtom } from "../atoms/userAtoms";
 import axios from "axios";
-import { useAtom } from "jotai";
+import { getStore } from './jotaiStore'; // 需要创建 Jotai store 实例
 
-const baseUrl = 'https://localhost:8080/'
+const BASE_URL = 'http://localhost:8080';
 
-const [token ,setToken] = useAtom(tokenAtom)
+const apiClient = axios.create({
+  baseURL: BASE_URL,
+});
 
-const Post = async (url,Data) => {
-    try{
-        const response = await axios.post(baseUrl+url, Data,{
-           headers:{Authorization : `Bearer ${token}`}
-        });
-        return response.data
-    }catch (error) {
-    console.error('Error creating post:', error);
-    }   
-}
+// 获取当前 token（适用于非组件环境）
+const getToken = () => {
+  const store = getStore();
+  return store.get(tokenAtom); // 从 Jotai store 读取
+};
 
-const Get = async (url) => {
-    try{
-        const response = await axios.get(baseUrl+url);
-        return response.data
-    }catch (error) {
-    console.error('Error creating post:', error);
-    }   
-}
+// 设置 token 的原子操作
+export const setToken = (newToken) => {
+  const store = getStore();
+  store.set(tokenAtom, newToken); // 更新 Jotai 状态
+};
 
-const Put = async (url,Data) => {
-    try{
-        const response = await axios.put(baseUrl+url, Data,{
-            headers:{Authorization : `Bearer ${token}`}
-        });
-        return response.data
-    }catch (error) {
-    console.error('Error creating post:', error);
-    }   
-}
+// 请求拦截器
+apiClient.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `${token}`
+  }
+  return config;
+});
 
-const Delete = async (url,Data) => {
-    try{
-        const response = await axios.delete(baseUrl+url, Data,{
-            headers:{Authorization : `Bearer ${token}`}
-        });
-        return response.data
-    }catch (error) {
-    console.error('Error creating post:', error);
-    }   
-}
+// 响应拦截器
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    console.error('API Error:', error);
+    throw error;
+  }
+);
 
-export { Post ,Put ,Delete ,Get ,token ,setToken }
+export const get = async (url, params = {}) => apiClient.get(url, { params });
+export const post = async (url, data = {}, params = {}) => apiClient.post(url, data, { params });
+export const put = async (url, data = {}, params = {}) => apiClient.put(url, data, { params });
+export const del = async (url, data = {}) => apiClient.delete(url, { data });
+
+export { apiClient };

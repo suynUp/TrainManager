@@ -2,8 +2,10 @@ import React, { useState ,useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import OrdersStatuList from './OrdersStatusList';
 import OrdersList from './OrdersList';
+import TimeFilter from './TimeFilter'
 import { useAtom } from 'jotai';
 import { statusAtom } from '../../AtomExport';
+
 
 const OrdersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,6 +16,8 @@ const OrdersPage = () => {
   const [prevStatus, setPrevStatus] = useState('all')
 
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const [timeFilter, setTimeFilter] = useState('month');
 
   const inpRef = useRef() 
 
@@ -43,6 +47,20 @@ const OrdersPage = () => {
         break;
     }
   },[status])
+
+  useEffect(()=>{
+    switch(timeFilter){
+      case 'month':
+        setShowOrders(orders)
+        break;
+      case 'week':
+        setShowOrders(orders.filter(or=>isToday(or.bookingDate)))
+        break;
+      case 'today':
+        setShowOrders(orders.filter(or=>isWithinLast7Days(or.bookingDate)))
+        break;
+    }
+  },[timeFilter])
 
   const statusList = [{
     sta:'all',
@@ -148,15 +166,42 @@ const OrdersPage = () => {
     setStatusFilter('all');
   };
 
+  const isToday = (timeStamp) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 设置为今天的 00:00:00
+
+    // 获取明天的日期（用于比较上限）
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1); // 明天的 00:00:00
+
+    // 解析时间戳
+    const orderDate = new Date(timeStamp);
+
+    // 判断是否在今天
+    return orderDate >= today && orderDate < tomorrow;
+  }
+
+  const isWithinLast7Days = (timeStamp) => {  
+    // 当前时间
+    const now = new Date();
+
+    // 7天前的时间（计算毫秒）
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 订单时间
+    const orderDate = new Date(timeStamp);
+
+    // 判断是否在近7天内（包括今天）
+    return orderDate >= sevenDaysAgo && orderDate <= now;
+  }
+
   return (
     <div className="flex flex-col max-w-4xl mx-auto min-w-[900px]">
-      {/* 头部 */}
       <div className={`${isScrolled?`fixed top-0 left-0 right-0 z-50 translate-x-[6.5px] mx-auto `:``}  max-w-4xl min-w-[770px] bg-white rounded-lg shadow-sm p-6 mb-6`}>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">我的订单</h1>
         </div>
 
-        {/* 搜索和筛选 */}
         <div className={`flex flex-col md:flex-row gap-4`}>
           <div className="flex-1 relative">
             <input
@@ -179,22 +224,12 @@ const OrdersPage = () => {
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
-          {/* <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">全部状态</option>
-            <option value="pending">待确认</option>
-            <option value="confirmed">已确认</option>
-            <option value="cancelled">已取消</option>
-          </select> */}
         </div>
       </div>
 
       <div className={`${isScrolled?'mt-[170px]':''}`}></div>{/*更平滑 */}
-      <div className='relative min-h-[100%] flex p-[20px] rounded-[10px] shadow-lg'>
-        <div className={`${isScrolled?'fixed translate-y-[-67px]':''} flex-col mr-[50px]`}>
+      <div className='relative bg-blue-50 min-h-[750px] flex p-[20px] rounded-[10px] shadow-lg'>
+        <div className={`${isScrolled?'fixed translate-y-[-67px]':''} flex-col mr-[7px] border-[2px] h-[70vh] pt-[20px] pr-[30px] pl-[10px] bg-white `}>
          {statusList.map(sl=> <OrdersStatuList 
           key={sl.sta}
           nowStatus={status}
@@ -203,7 +238,14 @@ const OrdersPage = () => {
           status={sl.sta}
           ></OrdersStatuList>
         )}
+         <div>
+          <TimeFilter 
+          selectedOption={timeFilter}
+          onChange={setTimeFilter}
+          />
         </div>
+        </div>
+        
         <div className={isScrolled?`w-[193.9px] m-[33px]`:'display-none'}></div>
         <div className='rounded w-[600px] bg-white p-[20px] shadow-lg'><OrdersList 
           orders={showOrders}
@@ -214,14 +256,6 @@ const OrdersPage = () => {
           />
         </div>
       </div>
-
-      {/* <OrdersList 
-        orders={orders}
-        searchQuery={searchQuery}
-        statusFilter={statusFilter}
-        onCancelOrder={handleCancelOrder}
-        onRefundOrder={handleRefundOrder}
-      /> */}
     </div>
   );
 };

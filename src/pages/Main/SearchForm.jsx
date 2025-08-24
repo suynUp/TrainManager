@@ -1,100 +1,132 @@
 import { useEffect, useState } from 'react';
-import { Search,RefreshCcw, Flag  } from 'lucide-react';
-import DatePicker from 'react-datepicker';
+import { Search, RefreshCcw, MapPin } from 'lucide-react';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useLocation } from 'wouter';
 import { useAtom } from 'jotai';
 import { toAtom, fromAtom, dateAtom } from '../AtomExport';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+import MyDatePicker from '../../components/DatePicker';
 
 const SearchForm = ({ onSearch, loading = false }) => {
+  const [, setLocation] = useLocation();
 
-  const [,setLocation] = useLocation()
+  // 检测逻辑
+  const [warnFrom, setWarnFrom] = useState(false);
+  const [warnTo, setWarnTo] = useState(false);
+  const [warnDate, setWarnData] = useState(false);
 
-  //检测逻辑
-  const [warnFrom, setWarnFrom] = useState(false)
-  const [warnTo, setWarnTo] = useState(false)
+  const [from, setFrom] = useAtom(fromAtom);
+  const [to, setTo] = useAtom(toAtom);
+  const [selectedDate, setSelectedDate] = useAtom(dateAtom);
 
-  const [from,setFrom] = useAtom(fromAtom)
-  const [to,setTo] = useAtom(toAtom)
-  const [date,setDate] = useAtom(dateAtom)
-
-  useEffect(()=>{
-    if(from===''||from === null){
-      setFrom('选择出发地')
+  // 初始化检查
+  useEffect(() => {
+    if (!from.stationName || from.stationName === '') {
+      setFrom({ stationId: -1, stationName: '选择出发地' });
     }
-    if(to===''||to ===null){
-      setTo('选择目的地')
+    if (!to.stationName || to.stationName === '') {
+      setTo({ stationId: -1, stationName: '选择目的地' });
     }
-  },[from,to])
+  }, [from.stationName, to.stationName, setFrom, setTo]);
 
+  // 交换出发地和目的地
   const handleSwapStations = () => {
-  // 使用简单的值比较而不是valueOf()
-  if ((from === '选择出发地' || from === '请先选择出发地') && to === '选择目的地') {
-    return;
-  }
-  if (from === '选择出发地') {
-    setFrom(to);
-    setTo('选择目的地');
-    return;
-  }
-  if (to === '选择目的地') {
+    // 如果出发地和目的地都是默认值，则不交换
+    if (
+      (from.stationName === '选择出发地' || from.stationName === '请先选择出发地') &&
+      to.stationName === '选择目的地'
+    ) {
+      return;
+    }
+    
+    // 如果出发地是默认值，将目的地设为出发地，目的地重置
+    if (from.stationName === '选择出发地' || from.stationName === '请先选择出发地') {
+      setFrom(to);
+      setTo({ stationId: -1, stationName: '选择目的地' });
+      return;
+    }
+    
+    // 如果目的地是默认值，将出发地设为目的值，出发地重置
+    if (to.stationName === '选择目的地') {
+      setTo(from);
+      setFrom({ stationId: -1, stationName: '选择出发地' });
+      return;
+    }
+    
+    // 正常交换
+    const temp = to;
     setTo(from);
-    setFrom('选择出发地');
-    return;
-  }
-  const mid = to;
-  setTo(from);
-  setFrom(mid);
-};
+    setFrom(temp);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("?")
-    CheckFrom()
-    CheckTo()
-    if(CheckFrom()||CheckTo()){
+    if (CheckFrom() || CheckTo() || CheckDate()) {
       return;
     }
-    setLocation('/TrainList')
+    if (from.stationId === to.stationId && from.stationId !== -1) {
+      alert('请选择不同出发地与目的地');
+      return;
+    }
+    setLocation('/TrainList');
   };
 
+  // 检查出发地
   const CheckFrom = () => {
-    if(from.valueOf()==='选择出发地'||from.valueOf()==='请先选择出发地'){
-      setWarnFrom(true)
-      setFrom('请先选择出发地')
-      return true
+    if (
+      from.stationName === '选择出发地' ||
+      from.stationName === '请先选择出发地' ||
+      from.stationId === -1
+    ) {
+      setWarnFrom(true);
+      setFrom({ stationId: -1, stationName: '请先选择出发地' });
+      return true;
     }
-    return false
-  }
-  const CheckTo = () => {
-    if(to.valueOf()==='选择目的地'||to.valueOf()==='请先选择目的地'){
-      setWarnTo(true)
-      setTo('请先选择目的地')
-      return true
-    }
-    return false
-  }
+    setWarnFrom(false);
+    return false;
+  };
 
-  const handleSearch = (str) => {//搜索
+  // 检查目的地
+  const CheckTo = () => {
+    if (
+      to.stationName === '选择目的地' ||
+      to.stationName === '请先选择目的地' ||
+      to.stationId === -1
+    ) {
+      setWarnTo(true);
+      setTo({ stationId: -1, stationName: '请先选择目的地' });
+      return true;
+    }
+    setWarnTo(false);
+    return false;
+  };
+
+  const CheckDate = () => {
+    if (selectedDate == null) {
+      setWarnData(true);
+      return true;
+    } else {
+      setWarnData(false);
+      return false;
+    }
+  };
+
+  const handleSearch = (str) => {
     const query = new URLSearchParams({
       key: str,
     }).toString();
-
-    setLocation(`/SearchStation?${query}`); // 跳转到 /search?keyword=react&page=1
+    setLocation(`/SearchStation?${query}`);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-8 w-full max-w-4xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 rounded-t-[20px] pl-[20px] pt-[10px] pb-[5px] bg-gradient-to-r from-blue-400 to-blue-600 w-[98%] m-auto">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">车票查询</h2>
-        <p className="text-gray-600">选择出发地、目的地和日期，开始您的旅程</p>
+        <p className="text-white">选择出发地、目的地和日期，开始您的旅程</p>
       </div>
 
       <div className="flex flex-col space-y-4">
         {/* 出发地和目的地 */}
-        <div className="flex flex-col gap-4 border-slate-200 rounded-lg bg-slate-100 m-2 p-4">
+        <div className="flex flex-col gap-4 border-slate-200 rounded-lg bg-sky-50 m-2 p-4">
           <div className='flex'>
             <div className="flex flex-col flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -102,84 +134,81 @@ const SearchForm = ({ onSearch, loading = false }) => {
               </label>
               <div className="relative">
                 <div
-                  onClick={()=>{handleSearch('start')}}
-                  className={`
-                    ${warnFrom ? `text-red-600 border-red-700 border-2 box-border border-solid`:`bg-white `}
-                    transition-all duration-200 hover:shadow-lg cursor-pointer w-full p-5 rounded-md appearance-none pr-8`}
-                  >
-                  {from}
+                  onClick={() => handleSearch('start')}
+                  className={`text-[20px] border-gray-200 border-2
+                    ${warnFrom ? `text-red-600 border-red-700 border-2 box-border border-solid` : `bg-white`}
+                    flex transition-all duration-200 hover:border-blue-400 hover:shadow-lg cursor-pointer w-full p-5 rounded-md appearance-none pr-8`}
+                >
+                  <div className='mr-[20px] flex items-center justify-center rounded-[10px] w-[30px] h-[30px] bg-gradient-to-r from-blue-600 to-blue-700'>
+                    <MapPin className='text-white h-[18px] w-[18px]'/>
+                  </div>
+                  {from.stationName}
                 </div>
-
               </div>
             </div>
+            
             <div onClick={handleSwapStations} className='mt-6 flex-1 content-center'>
-            <div className="group flex flex-col items-center cursor-pointer">
-              <RefreshCcw
-                className="h-[40px] w-[30px] group-hover:w-[40px] group-active:scale-[0.9] m-auto group-hover:text-blue-600 transition-all duration-500"
-              />
-              <div className="text-xs opacity-0 text-blue-600 group-hover:opacity-100 transition-opacity transition:all duration-500">
-                要换一换吗
-              </div>
-            </div> 
+              <div className="group flex flex-col items-center cursor-pointer">
+                <RefreshCcw
+                  className="h-[40px] w-[30px] group-hover:w-[40px] group-active:scale-[0.9] m-auto group-hover:text-blue-600 group-hover:rotate-180 transition-all duration-500"
+                />
+                <div className="text-xs opacity-0 text-blue-600 group-hover:opacity-100 transition-opacity transition:all duration-500">
+                  要换一换吗
+                </div>
+              </div> 
             </div>
+            
             <div className="flex flex-col flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 目的地
               </label>
               <div className="relative">
-              <div
-              onClick={()=>{handleSearch('end')}}
-                className={`
-                  ${warnTo ? `text-red-600 border-red-700 border-2 box-border border-solid`:`border-none `}
-                  transition-all duration-200 hover:shadow-lg cursor-pointer bg-white w-full p-5 rounded-md appearance-none pr-8`}                >
-                  {to}
+                <div
+                  onClick={() => handleSearch('end')}
+                  className={`text-[20px] border-gray-200 border-2
+                    ${warnTo ? `text-red-600 border-red-700 border-2 box-border border-solid` : `bg-white`}
+                    flex transition-all duration-200 hover:border-blue-400 hover:shadow-lg cursor-pointer w-full p-5 rounded-md appearance-none pr-8`}
+                >
+                  <div className='mr-[20px] flex items-center justify-center rounded-[10px] w-[30px] h-[30px] bg-gradient-to-r from-blue-600 to-blue-700'>
+                    <MapPin className='text-white h-[18px] w-[18px]'/>
+                  </div>
+                  {to.stationName}
                 </div>
               </div>
             </div>
           </div>
-                  {/* 日期选择 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              出发日期
-            </label>
-            <div
-            className='cursor-pointer bg-white w-[300px] outline-none p-3 rounded mb-5 hover:shadow-lg transition-all duration-300'
-            >{new Date(date).valueOf()}</div>
-             <DayPicker
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="border border-gray-200 rounded-lg p-3"
-              modifiersClassNames={{
-                selected: 'bg-gradient-to-r from-blue-600 to-blue-700  text-white hover:bg-blue-700 rounded',
-                today: 'font-bold text-blue-600 border-none rounded-[10px]',
-                hover: 'hover:bg-blue-100 scale', // 悬停效果
-              }}
-              modifiersStyles={{
-              hover: { 
-                backgroundColor: '#EFF6FF', // 对应bg-blue-50
-                transform: 'scale(1.05)',
-                transition: 'all 0.2s ease'
-              }
-              }}
-              styles={{
-                day: { 
-                  transition: 'background-color 0.2s, color 0.2s' // 平滑过渡
-                }
-              }}
-            />
-
+          
+          {/* 日期选择 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="space-y-6">
+                {/* 日期选择器 */}
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 hover:shadow-lg transition-all duration-500 border border-white/50">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    出发日期
+                  </label>
+                  <MyDatePicker
+                    setWarn={setWarnData}
+                    warn={warnDate}
+                    value={selectedDate}
+                    onChange={(date) => {
+                      setSelectedDate(date);
+                      setWarnData(false);
+                    }}
+                    placeholder={warnDate ? '请选择日期' : '选择出发日期'}
+                    className="mb-4"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        </div>
-
-
 
         {/* 搜索按钮 */}
         <button
+          onClick={handleSubmit}
           disabled={loading}
-          className="w-auto m-5 bg-blue-600 text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-auto m-5 bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg hover:scale-[1.02] active:scale-[.98] text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? (
             <div className="flex items-center justify-center">
@@ -187,7 +216,7 @@ const SearchForm = ({ onSearch, loading = false }) => {
               搜索中...
             </div>
           ) : (
-            <div onClick={handleSubmit} className="flex items-center justify-center">
+            <div className="flex items-center justify-center">
               <Search className="h-5 w-5 mr-2" />
               搜索车票
             </div>

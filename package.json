@@ -13,13 +13,15 @@
     "@tanstack/react-query": "^5.81.5",
     "axios": "^1.10.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.12",
     "jotai": "^2.12.5",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.539.0",
     "react": "^18.3.1",
     "react-datepicker": "^8.4.0",
     "react-day-picker": "^9.8.0",
     "react-dom": "^18.3.1",
     "react-tailwindcss-datepicker": "^2.0.0",
+    "react-toastify": "^11.0.5",
     "wouter": "^3.7.1"
   },
   "devDependencies": {

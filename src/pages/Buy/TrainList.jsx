@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Clock, MapPin, ArrowRight, ArrowLeft, Calendar, Filter, RotateCcw, Train, Zap } from 'lucide-react';
-import { mockTrains } from '../../atoms/mockData';
+import React, { useState, useEffect } from 'react';
+import { Clock, MapPin, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useLocation } from 'wouter';
 import FilterToggle from './FilterToggle';
+import { useAtom } from 'jotai';
+import { trainAtom, userAtom, seatTypeAtom } from '../AtomExport';
+import { get } from '../../utils/request';
 
 const TrainList = () => {
+  const [user] = useAtom(userAtom);
+  const [, setTrainAtom] = useAtom(trainAtom);
+  const [, setSeatType] = useAtom(seatTypeAtom);
   const [, setLocation] = useLocation();
+  
   const [filters, setFilters] = useState({
     selectedDate: new Date().toISOString().split('T')[0],
     timeRange: 'all',
@@ -13,7 +19,61 @@ const TrainList = () => {
     showSidebar: false
   });
 
-  const trains = mockTrains;
+  // 假设这是从API获取的数据
+  const [routeData, setRouteData] = useState([
+    {
+      "from": {
+        "routeId": 7,
+        "train": {
+          "trainId": 1,
+          "trainNo": "G101",
+          "trainType": "G",
+          "isActive": true
+        },
+        "station": {
+          "stationId": 3,
+          "stationName": "济南西站",
+          "city": "济南",
+          "province": "山东省",
+          "stationCode": "JNX",
+          "status": "IN_OPERATION"
+        },
+        "stationSequence": 0,
+        "departureTime": "2025-08-22T02:11:00",
+        "arrivalTime": null,
+        "stopDuration": 7,
+        "distanceFromStart": null
+      },
+      "to": {
+        "routeId": 9,
+        "train": {
+          "trainId": 1,
+          "trainNo": "G101",
+          "trainType": "G",
+          "isActive": true
+        },
+        "station": {
+          "stationId": 6,
+          "stationName": "广州南站",
+          "city": "广州",
+          "province": "广东省",
+          "stationCode": "IZQ",
+          "status": "IN_OPERATION"
+        },
+        "stationSequence": 2,
+        "departureTime": "2025-08-22T04:24:00",
+        "arrivalTime": "2025-08-22T04:17:00",
+        "stopDuration": 7,
+        "distanceFromStart": 200
+      },
+      "businessavailable": 1,
+      "firstticketPrice": 296,
+      "secondticketPrice": 160,
+      "businessticketPrice": 552,
+      "firstavailable": 0,
+      "secondavailable": 0
+    }
+  ]);
 
   const getTrainTypeName = (type) => {
     const typeMap = {
@@ -50,15 +110,55 @@ const TrainList = () => {
     return typeMap[type] || type;
   };
 
+  // 格式化时间，只显示时分
+  const formatTime = (dateTimeString) => {
+    if (!dateTimeString) return '--:--';
+    const date = new Date(dateTimeString);
+    return date.toTimeString().slice(0, 5);
+  };
+
+  // 计算历时
+  const calculateDuration = (departureTime, arrivalTime) => {
+    if (!departureTime || !arrivalTime) return '--:--';
+    const dep = new Date(departureTime);
+    const arr = new Date(arrivalTime);
+    const diff = arr - dep;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(()=>{
+    const getRoute = async () => {
+      const res = await get("/trainRoute/findDirectRoutes",{
+        fromId:3,
+        toId:6,
+        travelDate:"2025-08-21"
+      })
+      if(res.code == 200){
+        setRouteData(res.data)
+      }
+    }
+    getRoute()
+  },[])
+
   const goBack = () => {
     setLocation('/');
   };
 
-  const onSelectTrain = (train, type) => {
-    console.log('Selected train:', train, 'seat type:', type);
+  const onSelectTrain = (route, seatType) => {
+    console.log('Selected route:', route, 'seat type:', seatType);
+    setTrainAtom(route);
+    setSeatType(seatType);
+
+    if (JSON.stringify(user) === '{}') {
+      setLocation('/Login');
+    } else {
+      setLocation('/SeatSelection');
+    }
   };
 
-  if (trains.length === 0) {
+  if (routeData.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md mx-auto">
@@ -76,16 +176,11 @@ const TrainList = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Floating Sidebar */}
-     
-      <FilterToggle
-      filters={filters}
-      setFilters={setFilters}
-      ></FilterToggle>
+      <FilterToggle filters={filters} setFilters={setFilters} />
 
       <div className="max-w-6xl mx-auto p-4">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl shadow-xl">
+        <div id='top' className="transition-all duration-500 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl shadow-xl">
           <div className="flex items-center p-6">
             <button 
               onClick={goBack}
@@ -106,7 +201,7 @@ const TrainList = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  共找到 <span className="text-blue-600">{trains.length}</span> 趟列车
+                  共找到 <span className="text-blue-600">{routeData.length}</span> 趟列车
                 </h3>
                 <p className="text-gray-600">
                   点击选座购票开始预订 • 实时更新座位信息
@@ -125,29 +220,31 @@ const TrainList = () => {
             </div>
           </div>
 
-          {/* Train List */}
+          {/* Route List */}
           <div className="space-y-1">
-            {trains.map((train) => (
+            {routeData.map((route, index) => (
               <div 
-                key={train.id} 
+                key={index} 
                 className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-300 group"
               >
                 <div className="p-6">
                   {/* Train Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-4">
-                      <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-lg ${getTrainTypeColor(train.type)}`}>
-                        {train.trainNumber}
+                      <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-lg ${getTrainTypeColor(route.from.train.trainType)}`}>
+                        {route.from.train.trainNo}
                       </span>
                       <div className="hidden md:block">
                         <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                          {getTrainTypeName(train.type)}
+                          {getTrainTypeName(route.from.train.trainType)}
                         </span>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-gray-500 mb-1">历时</div>
-                      <div className="text-lg font-semibold text-gray-700">{train.duration}</div>
+                      <div className="text-lg font-semibold text-gray-700">
+                        {calculateDuration(route.from.departureTime, route.to.arrivalTime)}
+                      </div>
                     </div>
                   </div>
 
@@ -156,11 +253,11 @@ const TrainList = () => {
                     <div className="flex items-center space-x-8">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-gray-900 mb-2">
-                          {train.departureTime}
+                          {formatTime(route.from.departureTime)}
                         </div>
                         <div className="flex items-center text-gray-600 bg-gray-50 px-3 py-1 rounded-lg">
                           <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-                          <span className="font-medium">{train.departureStation.name}</span>
+                          <span className="font-medium">{route.from.station.stationName}</span>
                         </div>
                       </div>
                       
@@ -174,11 +271,11 @@ const TrainList = () => {
                       
                       <div className="text-center">
                         <div className="text-3xl font-bold text-gray-900 mb-2">
-                          {train.arrivalTime}
+                          {formatTime(route.to.arrivalTime)}
                         </div>
                         <div className="flex items-center text-gray-600 bg-gray-50 px-3 py-1 rounded-lg">
                           <MapPin className="h-4 w-4 mr-2 text-green-500" />
-                          <span className="font-medium">{train.arrivalStation.name}</span>
+                          <span className="font-medium">{route.to.station.stationName}</span>
                         </div>
                       </div>
                     </div>
@@ -186,48 +283,116 @@ const TrainList = () => {
 
                   {/* Seat Types */}
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {train.seats.map((seat) => (
-                      <div
-                        key={seat.type}
-                        className={`border-2 rounded-xl p-5 transition-all duration-300 ${
-                          seat.available === 0
-                            ? 'border-gray-200 bg-gray-50'
-                            : 'border-gray-200 hover:border-blue-400 hover:shadow-lg group-hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <div className="font-semibold text-gray-900 mb-1">
-                              {getSeatTypeDisplay(seat.type)}
-                            </div>
-                            <div className={`text-sm flex items-center ${
-                              seat.available > 0 ? 'text-green-600' : 'text-gray-500'
-                            }`}>
-                              <div className={`w-2 h-2 rounded-full mr-2 ${
-                                seat.available > 0 ? 'bg-green-400' : 'bg-gray-400'
-                              }`}></div>
-                              余票 {seat.available} 张
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-yellow-400">
-                              ¥{seat.price}
-                            </div>
+                    {/* 商务座 */}
+                    <div className={`border-2 rounded-xl p-5 transition-all duration-300 ${
+                      route.businessavailable === 0
+                        ? 'border-gray-200 bg-gray-50'
+                        : 'border-gray-200 hover:border-blue-400 hover:shadow-lg group-hover:border-blue-300'
+                    }`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="font-semibold text-gray-900 mb-1">商务座</div>
+                          <div className={`text-sm flex items-center ${
+                            route.businessavailable > 0 ? 'text-green-600' : 'text-gray-500'
+                          }`}>
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              route.businessavailable > 0 ? 'bg-green-400' : 'bg-gray-400'
+                            }`}></div>
+                            余票 {route.businessavailable} 张
                           </div>
                         </div>
-                        <button
-                          onClick={() => onSelectTrain(train, seat.type)}
-                          disabled={seat.available === 0}
-                          className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                            seat.available === 0
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:scale-105 active:scale-95'
-                          }`}
-                        >
-                          {seat.available === 0 ? '已售完' : '选座购票'}
-                        </button>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-yellow-400">
+                            ¥{route.businessticketPrice}
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                      <button
+                        onClick={() => onSelectTrain(route, 'businessClass')}
+                        disabled={route.businessavailable === 0}
+                        className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                          route.businessavailable === 0
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:scale-105 active:scale-95'
+                        }`}
+                      >
+                        {route.businessavailable === 0 ? '已售完' : '选座购票'}
+                      </button>
+                    </div>
+
+                    {/* 一等座 */}
+                    <div className={`border-2 rounded-xl p-5 transition-all duration-300 ${
+                      route.firstavailable === 0
+                        ? 'border-gray-200 bg-gray-50'
+                        : 'border-gray-200 hover:border-blue-400 hover:shadow-lg group-hover:border-blue-300'
+                    }`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="font-semibold text-gray-900 mb-1">一等座</div>
+                          <div className={`text-sm flex items-center ${
+                            route.firstavailable > 0 ? 'text-green-600' : 'text-gray-500'
+                          }`}>
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              route.firstavailable > 0 ? 'bg-green-400' : 'bg-gray-400'
+                            }`}></div>
+                            余票 {route.firstavailable} 张
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-yellow-400">
+                            ¥{route.firstticketPrice}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onSelectTrain(route, 'firstClass')}
+                        disabled={route.firstavailable === 0}
+                        className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                          route.firstavailable === 0
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:scale-105 active:scale-95'
+                        }`}
+                      >
+                        {route.firstavailable === 0 ? '已售完' : '选座购票'}
+                      </button>
+                    </div>
+
+                    {/* 二等座 */}
+                    <div className={`border-2 rounded-xl p-5 transition-all duration-300 ${
+                      route.secondavailable === 0
+                        ? 'border-gray-200 bg-gray-50'
+                        : 'border-gray-200 hover:border-blue-400 hover:shadow-lg group-hover:border-blue-300'
+                    }`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="font-semibold text-gray-900 mb-1">二等座</div>
+                          <div className={`text-sm flex items-center ${
+                            route.secondavailable > 0 ? 'text-green-600' : 'text-gray-500'
+                          }`}>
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              route.secondavailable > 0 ? 'bg-green-400' : 'bg-gray-400'
+                            }`}></div>
+                            余票 {route.secondavailable} 张
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-yellow-400">
+                            ¥{route.secondticketPrice}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onSelectTrain(route, 'secondClass')}
+                        disabled={route.secondavailable === 0}
+                        className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                          route.secondavailable === 0
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:scale-105 active:scale-95'
+                        }`}
+                      >
+                        {route.secondavailable === 0 ? '已售完' : '选座购票'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

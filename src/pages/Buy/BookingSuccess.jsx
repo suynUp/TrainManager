@@ -1,21 +1,60 @@
-import React from 'react';
+import 
+{ useState, useEffect } from 'react';
 import { CheckCircle2, Download, Eye, Home, Calendar, MapPin, Clock } from 'lucide-react';
+import { useLocation } from 'wouter';
 
-const BookingSuccess = ({
-  bookingId,
-  train,
-  passengers,
-  seats,
-  onBackToHome,
-  onViewOrders,
-}) => {
+const BookingSuccess = () => {
+  // 将原来的 props 转为 useState 状态
+  const [bookingId, setBookingId] = useState('');
+  const [train, setTrain] = useState(null);
+  const [passengers, setPassengers] = useState([]);
+  const [seats, setSeats] = useState([]);
+
+  const [,setLocation] =useLocation()
+  
+  // 模拟原来的回调函数
+  const onBackToHome = () => {
+    console.log('返回首页');
+    setLocation('/')
+  };
+  
+  const onViewOrders = () => {
+    console.log('查看订单');
+    // 这里可以添加实际导航逻辑
+  };
+
+  // 在 useEffect 中设置测试值
+  useEffect(() => {
+    // 设置测试数据
+    setBookingId('TS20230815001');
+    
+    setTrain({
+      trainNumber: 'G1234',
+      departureTime: '08:00',
+      arrivalTime: '12:30',
+      duration: '4小时30分',
+      departureStation: { name: '北京南站' },
+      arrivalStation: { name: '上海虹桥站' }
+    });
+    
+    setPassengers([
+      { name: '张三', idNumber: '110101199001011234', passengerType: 'adult' },
+      { name: '李四', idNumber: '310101199102022345', passengerType: 'adult' }
+    ]);
+    
+    setSeats([
+      { carNumber: '05', seatNumber: '12A', price: 553 },
+      { carNumber: '05', seatNumber: '12B', price: 553 }
+    ]);
+  }, []);
+
   const totalPrice = seats.reduce((sum, seat) => sum + seat.price, 0);
 
   const handleDownloadTicket = () => {
     // 模拟下载电子票
     const ticketData = {
       bookingId,
-      train: train.trainNumber,
+      train: train?.trainNumber,
       passengers: passengers.map(p => p.name),
       seats: seats.map(s => `${s.carNumber}车${s.seatNumber}`),
       totalPrice,
@@ -56,7 +95,7 @@ const BookingSuccess = ({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
                   <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    {train.trainNumber}
+                    {train?.trainNumber}
                   </span>
                   <span className="text-sm text-gray-600">
                     {new Date().toLocaleDateString()} ({new Date().toLocaleDateString('zh-CN', { weekday: 'long' })})
@@ -68,11 +107,11 @@ const BookingSuccess = ({
                 <div className="flex items-center space-x-4">
                   <div className="text-center">
                     <div className="text-xl font-bold text-gray-900">
-                      {train.departureTime}
+                      {train?.departureTime}
                     </div>
                     <div className="text-sm text-gray-600 flex items-center">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {train.departureStation.name}
+                      {train?.departureStation?.name}
                     </div>
                   </div>
                   <div className="flex items-center text-gray-400">
@@ -82,17 +121,17 @@ const BookingSuccess = ({
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-gray-900">
-                      {train.arrivalTime}
+                      {train?.arrivalTime}
                     </div>
                     <div className="text-sm text-gray-600 flex items-center">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {train.arrivalStation.name}
+                      {train?.arrivalStation?.name}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-600">历时</div>
-                  <div className="font-medium">{train.duration}</div>
+                  <div className="font-medium">{train?.duration}</div>
                 </div>
               </div>
             </div>

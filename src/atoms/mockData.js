@@ -47,7 +47,7 @@ export const mockTrains = [
     arrivalTime: '13:28',
     duration: '4小时28分',
     seats: [
-      { type: 'businessClass', name: '商务座', price: 1748, available: 8 },
+      { type: 'businessClass', name: '商务座', price: 1748, available: 0 },
       { type: 'firstClass', name: '一等座', price: 933, available: 23 },
       { type: 'secondClass', name: '二等座', price: 553, available: 89 },
     ],

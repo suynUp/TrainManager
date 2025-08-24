@@ -1,9 +1,24 @@
-import { useRef, useEffect } from "react"
-import { Search } from "lucide-react"
+import { useRef, useEffect, useState } from "react"
+import { Search, TrainFront } from "lucide-react"
+import { useLocation } from "wouter"
+import { get } from "../../utils/request"
+import { useAtom } from "jotai"
+import { userIdAtom } from "../AtomExport"
 
 const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
     const inputRef = useRef(null)
 
+    const [ about , setAbout ] = useState([])  
+
+    const [userId] = useAtom(userIdAtom)
+
+    const [,setLocation] = useLocation()
+    /* 
+    city: "北京"
+    province: "北京市"
+    stationCode: "BJN"
+    stationId: 1
+    stationName: "北京南站" */
     // 自动聚焦输入框
     useEffect(() => {
         if (isFocused && inputRef.current) {
@@ -11,9 +26,28 @@ const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
         }
     }, [isFocused])
 
+    useEffect(()=>{
+        getStation()
+    },[station])
+
+    const getStation = async () => {
+        const res = await get("/station/search",{stationName:station.stationName,userId})
+        if(res.code == 200){
+            if(res.data==null){
+                setAbout([])
+            }else{
+                setAbout(res.data)
+            }
+        }
+    }
+
+    const choose = (city) => {
+        setStation(city)
+        setIsFocused(false)
+    }
+
     return (
         <>
-            {/* 模糊背景层（仅在 isFocused 时显示） */}
             <div 
                 className={`fixed inset-0 bg-opacity-20  bg-white/10 transition-all duration-300 ease-out ${
                     isFocused 
@@ -23,7 +57,6 @@ const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
                 onClick={() => setIsFocused(false)}
             ></div>
 
-            {/* 搜索框容器（带滑入动画） */}
             <div 
                 className={`min-w-[770px] fixed top-0 left-0 w-full flex justify-center transition-all duration-300 ease-out ${
                     isFocused 
@@ -41,14 +74,14 @@ const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
                         </div>
                         <div className="flex">
                             <div className="shadow-lg border pl-[10px] w-[100%] rounded-[20px] mt-[20px] mb-[10px] flex items-center">
-                                <Search className=""></Search>
+                                <Search></Search>
                                 <input 
                                     className="border-none w-[90%] p-2 focus:outline-none"
                                     ref={inputRef}
                                     placeholder="输入城市或车站" 
                                     type="text" 
-                                    value={station} 
-                                    onChange={(e) => setStation(e.target.value)}
+                                    value={station.stationName} 
+                                    onChange={(e) => setStation({...station,stationName:e.target.value})}
                                     autoFocus
                                 />
                             </div>
@@ -57,6 +90,20 @@ const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
                             >
                                 搜索
                             </div>
+                        </div>
+                        <div className="max-h-[400px] overflow-auto">
+                            { about.map((ele)=>{
+                                return <div key={ele.stationId} 
+                                className="flex border-cyan-200 border-l-4 border-r-4 shadow-lg rounded-[10px] 
+                                           m-[2px] pt-[3px] pb-[3px] pl-[12px] text-cyan-700
+                                           w-[760px] transition-all duration-400 cursor-pointer
+                                           hover:scale-[1.01] hover:bg-cyan-400 hover:text-white"
+                                onClick={()=>choose(ele)}
+                                ><TrainFront className="h-[24px] w-[20px] mr-[5px]"></TrainFront>{ele.stationName}</div>
+                            })}
+                            { about.length === 0 && <div className="flex w-full h-[20vh] items-center justify-center text-gray-400">
+                                    搜点什么吧
+                                </div>}
                         </div>
                     </div>
                 </div>

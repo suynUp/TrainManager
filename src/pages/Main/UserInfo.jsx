@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
-import { Settings, MessageCircle, User, FileText, Gift, CheckCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { UserPen, Settings, MessageCircle,CircleAlert, User, FileText, CheckCircle } from 'lucide-react';
 import 'react-datepicker/dist/react-datepicker.css';
+import { useLocation } from 'wouter';
+import { useAtom } from 'jotai';
+import { userAtom } from '../AtomExport';
 
 const UserInfo = () => {
- 
+
+  const [, setLocation ] = useLocation()
+
+  const [user] = useAtom(userAtom)
+
+  const Passenger = () => {
+    setLocation('/Passenger')
+  }
+
+  const Auth = () => {
+    setLocation('/Auth')
+  }
+  
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-8 w-full max-w-4xl mx-auto h-50">
     <div className="min-h-screen ">
@@ -30,17 +45,23 @@ const UserInfo = () => {
 
           {/* User Info */}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white mb-3">Dave</h1>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-700 mb-3">
+                  {JSON.stringify(user) !== '{}' ? user.userName:'请登录'}
+                </h1>
+            </div>
             
             {/* Verification Badges */}
             <div className="flex flex-wrap gap-2">
               <div className="border-2 border-inherit flex items-center bg-white/95 rounded-full px-3 py-1.5 shadow-sm">
-                <span className="text-sm font-medium text-gray-700 mr-1">手机核验成功</span>
+              {user.real_name!==null&&JSON.stringify(user) !== '{}'?
+                <><span className="text-sm font-medium text-gray-700 mr-1">已实名认证</span>
                 <CheckCircle className="w-4 h-4 text-green-500" />
-              </div>
-              <div className="border-2 border-inherit flex items-center bg-white/95 rounded-full px-3 py-1.5 shadow-sm">
-                <span className="text-sm font-medium text-gray-700 mr-1">已实名认证</span>
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                </>:<>
+                <span className="text-sm font-medium text-gray-700 mr-1">请实名认证</span>
+                <CircleAlert className="w-4 h-4 text-red-500" />
+                </>
+                }
               </div>
             </div>
           </div>
@@ -50,7 +71,8 @@ const UserInfo = () => {
         <div className="border-2 border-inherit bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
           <div className="grid grid-cols-3 gap-6">
             {/* Passenger Card */}
-            <div className="flex flex-col items-center space-y-3 p-4 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer group">
+            <div className="flex flex-col items-center space-y-3 p-4 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer group"
+            onClick={Passenger}>
               <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
                 <User className="w-8 h-8 text-blue-600" />
               </div>
@@ -66,11 +88,12 @@ const UserInfo = () => {
             </div>
 
             {/* Coupons Card */}
-            <div className="flex flex-col items-center space-y-3 p-4 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer group">
+            <div className="flex flex-col items-center space-y-3 p-4 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer group"
+            onClick={Auth}>
               <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
-                <Gift className="w-8 h-8 text-blue-600" />
+                <UserPen className="w-8 h-8 text-blue-600" />
               </div>
-              <span className="text-sm font-medium text-gray-700 text-center">优惠券</span>
+              <span className="text-sm font-medium text-gray-700 text-center">实名认证</span>
             </div>
           </div>
         </div>

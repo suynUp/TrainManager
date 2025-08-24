@@ -1,22 +1,31 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle, ArrowLeft} from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, CheckCircle, ArrowLeft} from 'lucide-react';
+import { useAtom } from 'jotai';
+import { userAtom, userIdAtom, tokenAtom } from '../AtomExport';
+import { post } from '../../utils/request';
+import { useLocation } from 'wouter';
+import { toast, ToastContainer } from 'react-toastify';
 
-function Login() {
+const Login = () => {
+  const [,setUserId] = useAtom(userIdAtom)
+  const [token, setToken] = useAtom(tokenAtom);
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    userName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role:1
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const goBack = () => {
+    console.log('成功了')
     window.history.back();
-  }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -36,8 +45,8 @@ function Login() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!isLogin && !formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!isLogin && !formData.userName.trim()) {
+      newErrors.userName = 'Name is required';
     }
 
     if (!formData.email.trim()) {
@@ -62,23 +71,64 @@ function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    isLogin? login() : register()
+  };
+
+  const login = async () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    
-    // Handle success (in real app, you'd redirect or show success message)
-    alert(`${isLogin ? 'Login' : 'Registration'} successful!`);
-  };
+
+    console.log(formData)
+
+    try{
+      const response = await post("/user/login",{},formData)
+      console.log("login",response)
+      if(response.code == 200){
+        setToken(response.data.token) 
+        setUserId(response.data.id)
+        goBack()
+      }else{
+        setIsLoading(false)
+        toast(response.data)
+      }
+    }catch(e){
+      setIsLoading(false)
+      toast(e)
+    } 
+  }
+
+  const register = async () => {
+     if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    console.log(formData)
+
+    try{
+      const response = await post("/user/register",formData,{role:formData.role})
+      console.log(response)
+      if(response.code == 200){
+        toast('成功啦！')
+        setIsLogin(true)
+        setIsLoading(false)
+
+      }else{
+        setIsLoading(false)
+        toast(response.data)
+      }
+    }catch(e){
+      setIsLoading(false)
+      console.log(e)
+    } 
+  }
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setFormData({
-      name: '',
+      userName: '',
       email: '',
       password: '',
       confirmPassword: ''
@@ -88,6 +138,7 @@ function Login() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center p-4">
+      <ToastContainer></ToastContainer>
       <div className='self-start'>
         <ArrowLeft className=' w-[100px] h-[40px] cursor-pointer hover:text-sky-600 hover:scale-[1.2] active:scale-[0.9]	transition:all duration-200' onClick={goBack}/>  
       </div>
@@ -105,13 +156,11 @@ function Login() {
           </p>
         </div>
 
-        {/* Form Container */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          {/* Toggle Buttons */}
           <div className="flex bg-gray-100 rounded-xl p-1 mb-8">
             <button
               type="button"
-              onClick={() => setIsLogin(true)}
+              onClick={()=>{setIsLogin(true)}}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isLogin
                   ? 'bg-white text-gray-900 shadow-sm'
@@ -122,7 +171,7 @@ function Login() {
             </button>
             <button
               type="button"
-              onClick={() => setIsLogin(false)}
+              onClick={()=>{setIsLogin(false)}}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
                 !isLogin
                   ? 'bg-white text-gray-900 shadow-sm'
@@ -145,17 +194,17 @@ function Login() {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="userName"
+                    value={formData.userName}
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
+                      errors.userName ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="请输入昵称"
                   />
                 </div>
-                {errors.name && (
-                  <p className="text-red-500 text-sm">{errors.name}</p>
+                {errors.userName && (
+                  <p className="text-red-500 text-sm">{errors.userName}</p>
                 )}
               </div>
             )}
@@ -205,7 +254,6 @@ function Login() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
               {errors.password && (
@@ -236,7 +284,6 @@ function Login() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {errors.confirmPassword && (
@@ -244,6 +291,70 @@ function Login() {
                 )}
               </div>
             )}
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                登录身份
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 普通用户选项 */}
+                <label className={`relative flex items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                  formData.role === 1 
+                    ? "border-blue-500 bg-blue-50 shadow-md scale-[1.02]"
+                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="1"
+                    checked={formData.role === 1}
+                    onChange={() => setFormData({...formData, role: 1})}
+                    className="absolute opacity-0"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      formData.role === 1 
+                        ? "border-blue-500 bg-blue-500"
+                        : "border-gray-400"
+                    }`}>
+                      {formData.role === 1 && (
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                      )}
+                    </div>
+                    <span className="text-gray-700">普通用户</span>
+                  </div>
+                </label>
+
+                {/* 管理员选项 */}
+                <label className={`relative flex items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                  formData.role === 2
+                    ? "border-purple-500 bg-purple-50 shadow-md scale-[1.02]"
+                    : "border-gray-200 hover:border-purple-300 hover:bg-purple-50"
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="2"
+                    checked={formData.role === 2}
+                    onChange={() => setFormData({...formData, role: 2})}
+                    className="absolute opacity-0"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      formData.role === 2
+                        ? "border-purple-500 bg-purple-500"
+                        : "border-gray-400"
+                    }`}>
+                      {formData.role === 2 && (
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                      )}
+                    </div>
+                    <span className="text-gray-700">管理员</span>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             {/* Forgot Password (Login only) */}
             {isLogin && (
@@ -259,7 +370,7 @@ function Login() {
 
             {/* Submit Button */}
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
             >
@@ -267,7 +378,7 @@ function Login() {
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
                 <>
-                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <span>{isLogin ? '登录' : '注册'}</span>
                   <ArrowRight className="h-5 w-5" />
                 </>
               )}

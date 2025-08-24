@@ -1,11 +1,13 @@
 import { useLocation, Link } from 'wouter';
 import { Train, User, LogOut, BookMarked } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAtom } from 'jotai';
+import { userAtom } from '../AtomExport';
 
 const Header = ({cPage,setCPage}) => {
 
-  const [user, setUser] = useState();
-  const [location, setLocation] = useLocation();
+  const [user, setUser] = useAtom(userAtom);
+  const [, setLocation] = useLocation();
   
   const menuItems = [
     { id: 0, label: '车票预订', icon: Train },
@@ -13,12 +15,12 @@ const Header = ({cPage,setCPage}) => {
     { id: 2, label: '个人信息', icon: User },
   ];
 
+
   const onLogin = () => { 
     setLocation('/Login')
-    setUser({ name: 'dave' });
   };
 
-  const onLogout = () => { setUser(null); };
+  const onLogout = () => { setUser({}); };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -53,14 +55,14 @@ const Header = ({cPage,setCPage}) => {
 
           {/* 用户操作区 */}
           <div className="w-48 flex justify-end items-center">
-            {user ? (
+            {JSON.stringify(user) !== '{}' ? (
               <div className="flex items-center space-x-3 truncate">
-                <span className="text-sm text-gray-700 truncate">欢迎，{user.name}</span>
+                <span className="text-sm text-gray-700 truncate">{JSON.stringify(user) === '{}' ?'':user.userName}</span>
                 <button
                   onClick={onLogout}
-                  className="flex-shrink-0 flex items-center text-sm text-gray-600 hover:text-red-600 transition-colors"
+                  className="flex bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
-                  <LogOut className="h-4 w-4 mr-1" />
+                  <LogOut className="h-4 w-4 mr-1 mt-[2px]" />
                   退出
                 </button>
               </div>
