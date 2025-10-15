@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 
 const MyDatePicker = ({
@@ -13,9 +13,20 @@ const MyDatePicker = ({
   maxDate
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date(value) || new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date(value) || null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const containerRef = useRef(null);
+
+  // 同步外部 value
+  useEffect(() => {
+    if (value) {
+      const newDate = new Date(value);
+      if (!isNaN(newDate)) {
+        setSelectedDate(newDate);
+        setCurrentMonth(newDate);
+      }
+    }
+  }, [value]);
 
   const months = [
     '一月', '二月', '三月', '四月', '五月', '六月',
@@ -36,8 +47,8 @@ const MyDatePicker = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 获取当月的所有日期
-  const getDaysInMonth = (date) => {
+  // 获取当月的所有日期（使用 useMemo 优化性能）
+  const getDaysInMonth = useCallback((date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -47,11 +58,11 @@ const MyDatePicker = ({
 
     const days = [];
 
-    // 添加上个月的日期（灰色显示）
-    const prevMonth = new Date(year, month - 1, 0);
+    // 添加上个月的日期
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       days.push({
-        date: new Date(year, month - 1, prevMonth.getDate() - i),
+        date: new Date(year, month - 1, prevMonthLastDay - i),
         isCurrentMonth: false,
         isToday: false,
         isSelected: false
@@ -62,15 +73,9 @@ const MyDatePicker = ({
     const today = new Date();
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = new Date(year, month, day);
-      const isToday = 
-        currentDate.getDate() === today.getDate() &&
-        currentDate.getMonth() === today.getMonth() &&
-        currentDate.getFullYear() === today.getFullYear();
-      
-      const isSelected = selectedDate &&
-        currentDate.getDate() === selectedDate.getDate() &&
-        currentDate.getMonth() === selectedDate.getMonth() &&
-        currentDate.getFullYear() === selectedDate.getFullYear();
+      const isToday = currentDate.toDateString() === today.toDateString();
+      const isSelected = selectedDate && 
+        currentDate.toDateString() === selectedDate.toDateString();
 
       days.push({
         date: currentDate,
@@ -80,8 +85,8 @@ const MyDatePicker = ({
       });
     }
 
-    // 添加下个月的日期（灰色显示）
-    const remainingDays = 42 - days.length; // 6行 × 7天
+    // 添加下个月的日期
+    const remainingDays = 42 - days.length;
     for (let day = 1; day <= remainingDays; day++) {
       days.push({
         date: new Date(year, month + 1, day),
@@ -92,15 +97,16 @@ const MyDatePicker = ({
     }
 
     return days;
-  };
+  }, [selectedDate]);
+
+  const days = useMemo(() => getDaysInMonth(currentMonth), [currentMonth, getDaysInMonth]);
 
   const handleDateSelect = (date) => {
-    // 检查日期限制
-    if (minDate && date < minDate) return;
-    if (maxDate && date > maxDate) return;
+    if (isDateDisabled(date)) return;
 
     setSelectedDate(date);
-    setWarn(false)
+    setWarn(false);
+    console.log(date)
     onChange && onChange(date);
     setIsOpen(false);
   };
@@ -108,29 +114,25 @@ const MyDatePicker = ({
   const navigateMonth = (direction) => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev);
-      if (direction === 'prev') {
-        newMonth.setMonth(prev.getMonth() - 1);
-      } else {
-        newMonth.setMonth(prev.getMonth() + 1);
-      }
+      newMonth.setMonth(direction === 'prev' ? prev.getMonth() - 1 : prev.getMonth() + 1);
       return newMonth;
     });
   };
 
   const isDateDisabled = (date) => {
-    if (minDate && date < minDate) return true;
-    if (maxDate && date > maxDate) return true;
+    if (minDate && date < new Date(minDate.setHours(0, 0, 0, 0))) return true;
+    if (maxDate && date > new Date(maxDate.setHours(23, 59, 59, 999))) return true;
     return false;
   };
 
   const formatDate = (date) => {
+    if (!date) return '';
     return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   };
 
-  const days = getDaysInMonth(currentMonth);
-
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    
+ <div ref={containerRef} className={`relative ${className}`}>
       {/* 日期输入框 */}
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -194,7 +196,7 @@ const MyDatePicker = ({
           </div>
 
           {/* 日期网格 */}
-          <div className="grid grid-cols-7 gap-1 p-4 pt-0">
+          <div className="grid grid-cols-7 p-4 pt-0">
             {days.map((day, index) => {
               const isDisabled = isDateDisabled(day.date);
               
@@ -230,31 +232,11 @@ const MyDatePicker = ({
               );
             })}
           </div>
-
-          <div className="border-t border-gray-100/50 p-4">
-            <div className="flex items-center justify-center space-x-3">
-              <button
-                onClick={() => handleDateSelect(new Date())}
-                className="px-4 py-2 text-sm bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-100 transition-all duration-200 font-medium hover:scale-105 active:scale-95"
-              >
-                今天
-              </button>
-              <button
-                onClick={() => {
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  handleDateSelect(tomorrow);
-                }}
-                className="px-4 py-2 text-sm bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700 rounded-xl hover:from-blue-200 hover:to-blue-100 transition-all duration-200 font-medium hover:scale-105 active:scale-95"
-              >
-                明天
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 };
+
 
 export default MyDatePicker;

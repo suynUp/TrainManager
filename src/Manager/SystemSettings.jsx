@@ -71,7 +71,7 @@ const SystemSettings = () => {
 
       {/* 管理员管理 */}
       <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b">
+        {/* <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">管理员管理</h2>
             <button 
@@ -82,7 +82,7 @@ const SystemSettings = () => {
               <span>添加管理员</span>
             </button>
           </div>
-        </div>
+        </div> */}
         
         <div className="p-6">
           <div className="space-y-4">

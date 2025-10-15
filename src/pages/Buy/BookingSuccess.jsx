@@ -1,16 +1,63 @@
 import 
 { useState, useEffect } from 'react';
-import { CheckCircle2, Download, Eye, Home, Calendar, MapPin, Clock } from 'lucide-react';
+import { CheckCircle2, Download, Eye, Home, MapPin, Clock } from 'lucide-react';
 import { useLocation } from 'wouter';
-
+import { useAtom } from 'jotai';
+import { userIdAtom, orderAtom } from '../AtomExport';
+import { get } from '../../utils/request';
 const BookingSuccess = () => {
   // 将原来的 props 转为 useState 状态
+
+  const [order] = useAtom(orderAtom);
+  const [userId] = useAtom(userIdAtom);
+
+  const [allOrders, setAllOrders] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
   const [bookingId, setBookingId] = useState('');
   const [train, setTrain] = useState(null);
   const [passengers, setPassengers] = useState([]);
   const [seats, setSeats] = useState([]);
 
   const [,setLocation] =useLocation()
+
+  useEffect(() => {
+    const getOrder = async () => {
+      try {
+        const res = await get('/orderMessage/get', { orderId: order.orderId, userId });
+        console.log('订单数据:', res);
+        
+        if (res.code === 200 && res.data && res.data.length > 0) {
+          setAllOrders(res.data);
+          
+          // 处理乘客数据
+          const processedPassengers = res.data.map(item => ({
+            name: item.passenger.name,
+            idCard: item.passenger.idCard,
+            passengerType: item.passenger.passengerType,
+            phoneNumber: item.passenger.phoneNumber
+          }));
+          setPassengers(processedPassengers);
+          
+          // 处理座位数据，直接使用订单中的totalPrice
+          const processedSeats = res.data.map(item => ({
+            carNumber: item.seat.carriageNumber,
+            seatNumber: item.seat.seatNumber,
+            seatClass: item.seat.seatClass,
+            seatType: item.seat.seatType,
+            price: item.orders?.totalPrice || 0
+          }));
+          setSeats(processedSeats);
+          
+          // 计算总价 - 所有订单的totalPrice之和
+          const calculatedTotal = res.data.reduce((sum, item) => sum + (item.orders?.totalPrice || 0), 0);
+          setTotalPrice(calculatedTotal);
+        }
+      } catch (error) {
+        console.error('获取订单错误:', error);
+      }
+    }
+    getOrder()
+  }, [order.orderId, userId])
   
   // 模拟原来的回调函数
   const onBackToHome = () => {
@@ -47,8 +94,6 @@ const BookingSuccess = () => {
       { carNumber: '05', seatNumber: '12B', price: 553 }
     ]);
   }, []);
-
-  const totalPrice = seats.reduce((sum, seat) => sum + seat.price, 0);
 
   const handleDownloadTicket = () => {
     // 模拟下载电子票

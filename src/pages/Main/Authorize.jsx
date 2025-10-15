@@ -16,7 +16,7 @@ const RealNameAuth = () => {
     phoneNumber: '',
   });
   const [errors, setErrors] = useState({});
-  const [isVerified, setIsVerified] = useState(user.real_name !== undefined);
+  const [isVerified, setIsVerified] = useState(user.real_name !== null);
 
   const onBack = () => {
     window.history.back()
@@ -60,9 +60,7 @@ const RealNameAuth = () => {
     }else{
       alert("实名失败")
     }
-    
-    // 模拟认证成功
-    setIsVerified(true);
+        setIsVerified(true);
   };
 
   if (isVerified) {
@@ -103,11 +101,11 @@ const RealNameAuth = () => {
                 </p>
                 <p className="text-gray-700">
                   <span className="text-gray-500 mr-2">身份证:</span>
-                  {user?.idCard.replace(/^(\d{3})\d+(\d{4})$/, '$1***********$2')}
+                  {user?.idCard?.replace(/^(\d{3})\d+(\d{4})$/, '$1***********$2')}
                 </p>
                 <p className="text-gray-700">
                   <span className="text-gray-500 mr-2">手机号:</span>
-                  {user?.phoneNumber.replace(/^(\d{3})\d+(\d{4})$/, '$1****$2')}
+                  {user?.phoneNumber?.replace(/^(\d{3})\d+(\d{4})$/, '$1****$2')}
                 </p>
               </div>
             </div>

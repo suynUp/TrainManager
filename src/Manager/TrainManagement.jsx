@@ -15,7 +15,6 @@ function TrainManagement() {
   const [formData, setFormData] = useState({
     trainNo: '',           // 对应后端的 trainNo
     trainType: '',         // 对应后端的 trainType
-    departureTime:'',         // 前端自定义字段（可能需要调整）
     isActive: true         // 对应后端的 isActive
   });
   const [trigger, setTrigger] = useState(false);
@@ -105,6 +104,7 @@ function TrainManagement() {
       seatCount: '',
       isActive: true
     });
+    setShowAddForm(false)
   };
 
   const getTrainTypeLabel = (type) => {
@@ -195,14 +195,6 @@ function TrainManagement() {
                 <option value={false}>停运</option>
               </select>
             </div>
-            <div>
-                <DateTimePicker
-                value={formData.departureTime}
-                onChange={(value) => setFormData({...formData, departureTime: value})}
-                label="出发时间"
-                required={true}
-                ></DateTimePicker>
-            </div>
           </div>
           
           <div className="flex space-x-3">
@@ -257,7 +249,6 @@ function TrainManagement() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">车次信息</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">车型</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运行时间</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运营状态</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
               </tr>
@@ -275,9 +266,6 @@ function TrainManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                     {getTrainTypeLabel(train.trainType)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                    {formatDateTime(train.departureTime)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-sm font-medium ${

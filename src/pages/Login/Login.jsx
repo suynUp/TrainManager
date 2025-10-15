@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, CheckCircle, ArrowLeft} from 'lucide-react';
 import { useAtom } from 'jotai';
-import { userAtom, userIdAtom, tokenAtom } from '../AtomExport';
+import { userIdAtom, tokenAtom } from '../AtomExport';
 import { post } from '../../utils/request';
 import { useLocation } from 'wouter';
 import { toast, ToastContainer } from 'react-toastify';
 
+import backgroundImage from '../../assets/loginBg.png'
 const Login = () => {
   const [,setUserId] = useAtom(userIdAtom)
-  const [token, setToken] = useAtom(tokenAtom);
+  const [, setToken] = useAtom(tokenAtom);
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -23,7 +24,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const goBack = () => {
-    console.log('成功了')
     window.history.back();
   };
 
@@ -81,8 +81,6 @@ const Login = () => {
 
     setIsLoading(true);
 
-    console.log(formData)
-
     try{
       const response = await post("/user/login",{},formData)
       console.log("login",response)
@@ -92,7 +90,7 @@ const Login = () => {
         goBack()
       }else{
         setIsLoading(false)
-        toast(response.data)
+        toast.error(response.message)
       }
     }catch(e){
       setIsLoading(false)
@@ -108,7 +106,7 @@ const Login = () => {
     console.log(formData)
 
     try{
-      const response = await post("/user/register",formData,{role:formData.role})
+      const response = await post("/user/register",{...formData,role:null},{role:formData.role})
       console.log(response)
       if(response.code == 200){
         toast('成功啦！')
@@ -137,23 +135,34 @@ const Login = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center p-4">
+    <div className="relative z-10">
+      <div className="min-h-screen relative" style={{
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+      paddingTop: '4rem' // 添加顶部内边距，为导航栏留出空间
+    }}>
+      <div className='flex flex-col items-center'>
       <ToastContainer></ToastContainer>
-      <div className='self-start'>
-        <ArrowLeft className=' w-[100px] h-[40px] cursor-pointer hover:text-sky-600 hover:scale-[1.2] active:scale-[0.9]	transition:all duration-200' onClick={goBack}/>  
+      <div className='self-start m-[50px]  bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl items-center justify-center p-[10px] fixed'>
+        <ArrowLeft className=' w-[40px] h-[40px] cursor-pointer text-white hover:scale-[1.2] active:scale-[0.9]	transition:all duration-200' onClick={goBack}/>  
       </div>
-      <div className="w-full max-w-md mt-[50px]">
+      <div className="w-full max-w-md mt-[80px]">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center items-center flex flex-col justify-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-4">
             <User className="h-8 w-8 text-white" />
           </div>
+          <div className='bg-white w-[80%] rounded-[20px] py-[10px]'>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isLogin ? '欢迎回来' : '创建账户'}
           </h1>
           <p className="text-gray-600">
-            {isLogin ? 'Sign in to your account' : 'Join us today'}
+            {isLogin ? '使用你的账户登录' : '现在就加入我们'}
           </p>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
@@ -363,7 +372,6 @@ const Login = () => {
                   type="button"
                   className="text-sm text-blue-600 hover:text-blue-500 font-medium"
                 >
-                  忘记密码?
                 </button>
               </div>
             )}
@@ -388,24 +396,21 @@ const Login = () => {
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              {isLogin ? "还没有账户？" : "已经有账户了？"}
               <button
                 type="button"
                 onClick={toggleMode}
                 className="ml-1 text-blue-600 hover:text-blue-500 font-medium"
               >
-                {isLogin ? 'Sign up' : 'Sign in'}
+                {isLogin ? '去注册' : '去登录'}
               </button>
             </p>
           </div>
         </div>
-
-        {/* Security Badge */}
-        <div className="mt-6 flex items-center justify-center space-x-2 text-gray-500">
-          <CheckCircle className="h-4 w-4" />
-          <span className="text-sm">Secure & encrypted</span>
-        </div>
       </div>
+    </div>
+    <div className='h-[60px]'></div>
+    </div>
     </div>
   );
 }

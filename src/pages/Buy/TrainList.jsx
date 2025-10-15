@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Clock, MapPin, ArrowRight, ArrowLeft, X, AlertCircle  } from 'lucide-react';
 import { useLocation } from 'wouter';
 import FilterToggle from './FilterToggle';
 import { useAtom } from 'jotai';
-import { trainAtom, userAtom, seatTypeAtom } from '../AtomExport';
+import { trainAtom, userAtom, seatTypeAtom, fromAtom ,toAtom ,dateAtom } from '../AtomExport';
 import { get } from '../../utils/request';
 
 const TrainList = () => {
+
   const [user] = useAtom(userAtom);
+
+  const [from] = useAtom(fromAtom)
+  const [to] = useAtom(toAtom)
+  const [date] = useAtom(dateAtom)
+
   const [, setTrainAtom] = useAtom(trainAtom);
   const [, setSeatType] = useAtom(seatTypeAtom);
   const [, setLocation] = useLocation();
+  const [goToAuth,setGoToAuth] = useState(false)
+
+  const [body,setBody] = useState()
   
   const [filters, setFilters] = useState({
     selectedDate: new Date().toISOString().split('T')[0],
@@ -99,16 +108,15 @@ const TrainList = () => {
     return colorMap[type] || 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
   };
 
-  const getSeatTypeDisplay = (type) => {
-    const typeMap = {
-      'businessClass': '商务座',
-      'firstClass': '一等座',
-      'secondClass': '二等座',
-      'hardSleeper': '硬卧',
-      'softSleeper': '软卧',
-    };
-    return typeMap[type] || type;
-  };
+  function isBeforeArrivalTime(time) {
+  // 将字符串时间转换为Date对象
+  const arrivalDate = new Date(time);
+  // 获取当前时间
+  const now = new Date();
+  
+  // 比较当前时间是否早于到达时间
+  return now < arrivalDate;
+}
 
   // 格式化时间，只显示时分
   const formatTime = (dateTimeString) => {
@@ -130,18 +138,45 @@ const TrainList = () => {
 
   useEffect(()=>{
     const getRoute = async () => {
-      const res = await get("/trainRoute/findDirectRoutes",{
-        fromId:3,
-        toId:6,
-        travelDate:"2025-08-21"
-      })
-      if(res.code == 200){
-        setRouteData(res.data)
+
+      const searchParams = new URLSearchParams(window.location.search);
+
+      if(searchParams){
+        const res = await get("/trainRoute/findDirectRoutes",{
+          fromId:searchParams.get("fromId"),
+          toId:searchParams.get("toId"),
+          travelDate:searchParams.get("date")
+        })
+        if(res.code == 200){
+          console.log(res.data)
+          setRouteData(res.data.map(t=>{return {
+            ...t,
+            from:{
+              ...t.from,
+              departureTime:add8Hours(t.from.departureTime)
+            },
+            to:{
+              ...t.to,
+              arrivalTime:add8Hours(t.to.arrivalTime)
+            }
+          }}))
+        }else{
+          setRouteData([])
+        }
+      }else{
+        setLocation("/")
       }
     }
     getRoute()
-  },[])
+  },[date])
 
+  function add8Hours(date) {
+    if (!date) return null;
+    
+    const d = new Date(date);
+    d.setHours(d.getHours() + 8);
+    return d;
+  }
   const goBack = () => {
     setLocation('/');
   };
@@ -151,9 +186,12 @@ const TrainList = () => {
     setTrainAtom(route);
     setSeatType(seatType);
 
+    console.log(user)
     if (JSON.stringify(user) === '{}') {
       setLocation('/Login');
-    } else {
+    } else if(!user.real_name){
+      setGoToAuth(true)
+    }else{
       setLocation('/SeatSelection');
     }
   };
@@ -406,6 +444,42 @@ const TrainList = () => {
             数据实时更新 • 安全快捷预订
           </div>
         </div>
+
+        {goToAuth&&<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl transform transition-all duration-300 scale-100 opacity-100">
+        <X className='ml-[95%] hover:text-red-600 cursor-pointer hover:scale-105'
+        onClick={() => setGoToAuth(false)}></X>
+        {/* 图标和标题 */}
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-amber-100 p-3 rounded-full">
+            <AlertCircle className="h-8 w-8 text-amber-600" />
+          </div>
+        </div>
+        
+        <h3 className="text-xl font-bold text-center text-gray-900 mb-2">需要认证</h3>
+        <p className="text-gray-600 text-center mb-6">
+          请先完成实名认证，才能继续操作哦
+        </p>
+        
+        {/* 按钮组 */}
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => setGoToAuth(false)}
+            className="shadow-lg transition-all duration-500 flex-1 py-3 px-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white text-white rounded-lg font-medium hover:bg-gradient-to-r hover:from-red-600 hover:to-pink-600 hover:scale-105 text-white flex items-center justify-center gap-2"
+          >
+            <X size={18} />
+            取消
+          </button>
+          <button
+            onClick={() => setLocation('/Auth')}
+            className="shadow-lg transition-all duration-500 flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-white rounded-lg font-medium hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-600 hover:scale-105 text-white flex items-center justify-center gap-2 "
+          >
+            立即认证
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>}
       </div>
     </div>
   );

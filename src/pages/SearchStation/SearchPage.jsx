@@ -66,7 +66,7 @@ const SearchPage = ({ setIsFocused, station, setStation, isFocused }) => {
             >
                 <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
                     <div className="flex flex-col">
-                        <div className="rounded-[10px] items-center justify-center w-full flex h-[100px] bg-sky-100">
+                        <div className="rounded-[10px] items-center justify-center w-full flex h-[100px] bg-gradient-to-r from-sky-100 to-blue-400 shadow-lg">
                             <div>            
                                 <Search className="inline"></Search>
                                 <b>车站搜索</b>

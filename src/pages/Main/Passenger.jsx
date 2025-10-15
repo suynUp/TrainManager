@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Edit3, Trash2, User, Phone, CreditCard, Calendar, AlertCircle, Users, Shield } from 'lucide-react';
+import { ArrowLeft, Plus, Edit3, Trash2, User, Phone, CreditCard, Calendar, AlertCircle, Users, Shield, Check } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { get, post } from '../../utils/request';
 import { useAtom } from 'jotai';
@@ -21,6 +21,8 @@ const PassengerManager = () => {
       passengerType: '成人',
     }
   ]);
+
+  const [origin,setOrigin] = useState()
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -53,7 +55,7 @@ const PassengerManager = () => {
       console.log(response.data)
       setPassengers(response.data.map(p=>{return {...p,passengerType:typeConverter(p.passengerType)}}))
     }else{
-      alert('失败')
+      toast.error('失败')
     }
   }
 
@@ -119,11 +121,13 @@ const PassengerManager = () => {
     } else {
       // 添加新乘车人
       const newPassenger = {
-        id: Date.now().toString(),
         ...formData,
         idCard: `${formData.idCard}`,
         phoneNumber: `${formData.phoneNumber}`,
       };
+      if(checkHave(newPassenger)){
+        toast.error('已有乘客')
+      }
       changeP = {...newPassenger,passengerType:typeConverter(newPassenger.passengerType)}
     }
 
@@ -131,7 +135,9 @@ const PassengerManager = () => {
 
     resetForm();
   };
-
+  const checkHave = (p) => {
+    return passengers.some(pa=>pa.idCard === p.idCard||pa.name===p.name)
+  }
   const update = async (passenger,isAdd) => {
 
     const res = await post("/passenger/add",passenger,{userId})

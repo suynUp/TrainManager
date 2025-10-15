@@ -96,7 +96,7 @@ function TrainSelector({ trains, selectedTrain, onSelect, onClose }) {
   );
 }
 
-function SeatManagementimport() {
+function SeatManagement() {
   const [userId] = useAtom(userIdAtom);
   const [seatData, setSeatData] = useState([]);
   const [trainData, setTrainData] = useState([]);
@@ -112,21 +112,31 @@ function SeatManagementimport() {
   const [editingCarriage, setEditingCarriage] = useState(null);
   const [editingSeatCounts, setEditingSeatCounts] = useState({FIRST: 0, SECOND: 0, BUSINESS: 0});
 
+  // 添加座位表单状态
+  const [newSeatData, setNewSeatData] = useState({
+    carriageNumber: "",
+    firNumber: 0,
+    secNumber: 0,
+    busNumber: 0,
+    sleNumber:0
+  });
+
   // 座位类型配置
   const seatClassConfig = {
-    BUSINESS: { name: '商务座', color: 'bg-orange-100 text-orange-800', icon: '🥇', bgColor: 'bg-orange-50' },
-    FIRST: { name: '一等座', color: 'bg-blue-100 text-blue-800', icon: '🥈', bgColor: 'bg-blue-50' },
-    SECOND: { name: '二等座', color: 'bg-green-100 text-green-800', icon: '🥉', bgColor: 'bg-green-50' }
+    BUSINESS: { name: '商务座', color: 'bg-orange-100 text-orange-800', icon: '🥇', bgColor: 'bg-orange-50', seatsPerRow: 2 },
+    FIRST: { name: '一等座', color: 'bg-blue-100 text-blue-800', icon: '🥈', bgColor: 'bg-blue-50', seatsPerRow: 4 },
+    SECOND: { name: '二等座', color: 'bg-green-100 text-green-800', icon: '🥉', bgColor: 'bg-green-50', seatsPerRow: 5 },
+    SLEEPER_BERTH: {name: '卧铺', color: 'bg-red-100 text-red-800', icon:'' ,bgColor:'bg-red-50',seatsPerRow:3}
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await get("/seat/get",{userId})
-        if(res.code == 200){
+        const res = await get("/seat/get", { userId });
+        if (res.code == 200) {
           setSeatData(res.data); 
-        }else{
-          toast.error("失败")
+        } else {
+          toast.error("获取座位数据失败");
         }
         setLoading(false);
       } catch (error) {
@@ -140,38 +150,54 @@ function SeatManagementimport() {
     }
   }, [userId]);
 
+  // 获取可用列车列表
+  useEffect(() => {
+    const fetchTrains = async () => {
+      try {
+        const res = await get("/train/get",{managerId:userId,key:''});
+        if (res.code === 200) {
+          setAvailableTrains(res.data);
+        }
+      } catch (error) {
+        console.error('Error fetching trains:', error);
+      }
+    };
+    
+    fetchTrains();
+  }, []);
+
   // 处理数据，按列车分组并统计车厢座位
   useEffect(() => {
     if (seatData.length > 0) {
       const trainMap = new Map();
 
       seatData.forEach(seat => {
-        const trainId = seat.seat.train.trainId;
+        const trainId = seat.train.trainId;
         
         if (!trainMap.has(trainId)) {
           trainMap.set(trainId, {
-            train: seat.seat.train,
+            train: seat.train,
             carriages: [],
-            totalSeats: 0,
-            route: seat.trainRoute
+            totalSeats: 0
           });
         }
 
         const trainInfo = trainMap.get(trainId);
-        let carriage = trainInfo.carriages.find(c => c.carriageNumber === seat.seat.carriageNumber);
+        let carriage = trainInfo.carriages.find(c => c.carriageNumber === seat.carriageNumber);
         
         if (!carriage) {
           carriage = {
-            carriageNumber: seat.seat.carriageNumber,
+            carriageNumber: seat.carriageNumber,
             FIRST: 0,
             SECOND: 0,
             BUSINESS: 0,
+            SLEEPER_BERTH:0,
             total: 0
           };
           trainInfo.carriages.push(carriage);
         }
 
-        carriage[seat.seat.seatClass]++;
+        carriage[seat.seatClass]++;
         carriage.total++;
         trainInfo.totalSeats++;
       });
@@ -201,7 +227,9 @@ function SeatManagementimport() {
     const train = trainData.find(t => t.train.trainId === trainId);
     if (!train) return;
     
-    const newCarriageNumber = (Math.max(...train.carriages.map(c => parseInt(c.carriageNumber))) + 1).toString();
+    const newCarriageNumber = train.carriages.length > 0 
+      ? (Math.max(...train.carriages.map(c => parseInt(c.carriageNumber))) + 1).toString()
+      : "1";
     
     try {
       // 这里应该调用实际的API
@@ -255,7 +283,8 @@ function SeatManagementimport() {
       setEditingSeatCounts({
         FIRST: carriage.FIRST,
         SECOND: carriage.SECOND,
-        BUSINESS: carriage.BUSINESS
+        BUSINESS: carriage.BUSINESS,
+        SLEEPER_BERTH: carriage.SLEEPER_BERTH
       });
     }
   };
@@ -276,7 +305,7 @@ function SeatManagementimport() {
                   ? {
                       ...c,
                       ...editingSeatCounts,
-                      total: editingSeatCounts.FIRST + editingSeatCounts.SECOND + editingSeatCounts.BUSINESS
+                      total: editingSeatCounts.FIRST + editingSeatCounts.SECOND + editingSeatCounts.BUSINESS + editingSeatCounts.SLEEPER_BERTH
                     }
                   : c
               )
@@ -292,16 +321,47 @@ function SeatManagementimport() {
 
   // 添加座位到选定列车
   const handleAddSeatsToTrain = async () => {
-    if (!selectedTrain) return;
+    if (!selectedTrain || !newSeatData.carriageNumber) {
+      toast.error("请选择列车并填写车厢号");
+      return;
+    }
     
     try {
-      console.log('Adding seats to train:', selectedTrain);
-      // 这里应该调用实际的API来添加座位
-      setShowAddSeatModal(false);
-      setSelectedTrain(null);
+      const response = await post("/seat/add",newSeatData, {
+        userId,
+        trainId: selectedTrain.trainId
+      });
+      console.log(response)
+      if (response.code === 200) {
+        toast.success("座位添加成功");
+        setShowAddSeatModal(false);
+        setSelectedTrain(null);
+        setNewSeatData({
+          carriageNumber: "",
+          firNumber: 0,
+          secNumber: 0,
+          busNumber: 0,
+          sleNumber: 0
+        });
+        
+        // 重新获取座位数据
+        const res = await get("/seat/get", { userId });
+        if (res.code == 200) {
+          setSeatData(res.data);
+        }
+      } else {
+        toast.error(response.message || "座位添加失败");
+      }
     } catch (error) {
       console.error('Error adding seats:', error);
+      toast.error("座位添加失败");
     }
+  };
+
+  // 计算总座位数
+  const calculateTotalSeats = () => {
+    const { firNumber, secNumber, busNumber } = newSeatData;
+    return firNumber * 4 + secNumber * 5 + busNumber * 2;
   };
 
   if (loading) {
@@ -352,7 +412,7 @@ function SeatManagementimport() {
                   <div>
                     <h2 className="text-xl font-bold">{train.train.trainNo}</h2>
                     <p className="text-blue-100">
-                      {train.train.trainType}车型 • {train.route.station.stationName}
+                      {train.train.trainType}车型
                     </p>
                   </div>
                 </div>
@@ -362,21 +422,20 @@ function SeatManagementimport() {
                 </div>
               </div>
               
-              {/* 发车时间 */}
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-blue-100">
-                  <span>发车时间:</span>
+                  <span>列车状态:</span>
                   <span className="font-medium">
-                    {new Date(train.route.departureTime).toLocaleString('zh-CN')}
+                    {train.train.isActive ? '运营中' : '停运'}
                   </span>
                 </div>
-                <button
+                {/* <button
                   onClick={() => handleAddCarriage(train.train.trainId)}
                   className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-lg flex items-center space-x-1 text-sm transition-colors"
                 >
                   <Plus className="h-3 w-3" />
                   <span>添加车厢</span>
-                </button>
+                </button> */}
               </div>
             </div>
 
@@ -434,14 +493,14 @@ function SeatManagementimport() {
                     
                     {editingCarriage?.trainId === train.train.trainId && editingCarriage?.carriageNumber === carriage.carriageNumber ? (
                       <div className="space-y-3">
-                        {['BUSINESS', 'FIRST', 'SECOND'].map((seatClass) => {
+                        {['BUSINESS', 'FIRST', 'SECOND','SLEEPER_BERTH'].map((seatClass) => {
                           const config = seatClassConfig[seatClass];
                           return (
                             <div key={seatClass} className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm">{config.icon}</span>
                                 <span className="text-sm font-medium text-gray-700">
-                                  {config.name}
+                                  {config.name}(行)
                                 </span>
                               </div>
                               <div className="flex items-center space-x-1">
@@ -495,7 +554,7 @@ function SeatManagementimport() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {['BUSINESS', 'FIRST', 'SECOND'].map((seatClass) => {
+                        {['BUSINESS', 'FIRST', 'SECOND','SLEEPER_BERTH'].map((seatClass) => {
                           const count = carriage[seatClass];
                           const config = seatClassConfig[seatClass];
                           
@@ -518,21 +577,6 @@ function SeatManagementimport() {
                       </div>
                     )}
                     
-                    {/* 座位占用率 */}
-                    {!editingCarriage && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex justify-between text-xs text-gray-600 mb-1">
-                          <span>占用率</span>
-                          <span>85%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: '85%' }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -540,7 +584,7 @@ function SeatManagementimport() {
 
             {/* 列车统计信息 */}
             <div className="bg-gray-50 px-6 py-4 border-t">
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-lg font-bold text-orange-600">
                     {train.carriages.reduce((sum, c) => sum + c.BUSINESS, 0)}
@@ -558,6 +602,12 @@ function SeatManagementimport() {
                     {train.carriages.reduce((sum, c) => sum + c.SECOND, 0)}
                   </div>
                   <div className="text-sm text-gray-600">二等座</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-green-600">
+                    {train.carriages.reduce((sum, c) => sum + c.SLEEPER_BERTH, 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">卧铺</div>
                 </div>
               </div>
             </div>
@@ -606,12 +656,80 @@ function SeatManagementimport() {
                   )}
                 </button>
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">车厢号</label>
+                <input
+                  type="text"
+                  value={newSeatData.carriageNumber}
+                  onChange={(e) => setNewSeatData({...newSeatData, carriageNumber: e.target.value})}
+                  placeholder="请输入车厢号"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">座位类型配置</h4>
+                
+                {[
+                  { key: 'busNumber', label: '商务座行数', seatsPerRow: 2, color: 'bg-orange-100 text-orange-800' },
+                  { key: 'firNumber', label: '一等座行数', seatsPerRow: 4, color: 'bg-blue-100 text-blue-800' },
+                  { key: 'secNumber', label: '二等座行数', seatsPerRow: 5, color: 'bg-green-100 text-green-800' },
+                  { key: 'sleNumber', label: '卧铺行数',   seatsPerRow: 3, color: 'bg-red-100 text-red-800' }
+                ].map((type) => (
+                  <div key={type.key} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">{type.label}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setNewSeatData({
+                          ...newSeatData,
+                          [type.key]: Math.max(0, newSeatData[type.key] - 1)
+                        })}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newSeatData[type.key]}
+                        onChange={(e) => setNewSeatData({
+                          ...newSeatData,
+                          [type.key]: Math.max(0, parseInt(e.target.value) || 0)
+                        })}
+                        className="w-16 text-center border border-gray-300 rounded px-2 py-1"
+                      />
+                      <button
+                        onClick={() => setNewSeatData({
+                          ...newSeatData,
+                          [type.key]: newSeatData[type.key] + 1
+                        })}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${type.color}`}>
+                        {newSeatData[type.key] * type.seatsPerRow} 座
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">总座位数</span>
+                    <span className="text-lg font-bold text-blue-600">{calculateTotalSeats()} 座</span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="flex space-x-3 mt-6">
               <button
                 onClick={handleAddSeatsToTrain}
-                disabled={!selectedTrain}
+                disabled={!selectedTrain || !newSeatData.carriageNumber || calculateTotalSeats() === 0}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors"
               >
                 确认添加
@@ -620,6 +738,12 @@ function SeatManagementimport() {
                 onClick={() => {
                   setShowAddSeatModal(false);
                   setSelectedTrain(null);
+                  setNewSeatData({
+                    carriageNumber: "",
+                    firNumber: 0,
+                    secNumber: 0,
+                    busNumber: 0
+                  });
                 }}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
@@ -646,4 +770,4 @@ function SeatManagementimport() {
   );
 }
 
-export default SeatManagementimport;
+export default SeatManagement;

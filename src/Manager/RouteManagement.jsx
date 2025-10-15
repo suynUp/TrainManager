@@ -53,7 +53,6 @@ function RouteManagement() {
         if (res.code === 200) {
           setTrains(res.data);
           setNewRoute({...newRoute,trainCode:res.data[0].trainCode,train:res.data[0]})
-          setTrainId(res.data[0].trainId)
         } else {
           toast.error("获取车辆列表失败");
         }
@@ -68,9 +67,15 @@ function RouteManagement() {
   },[])
 
   useEffect(()=>{
+    setTrains(trains?.filter(t=>routes?.some(r=>r.train.trainId!==t.trainId)))
+  },[routes])
+
+  useEffect(()=>{
     const getRoute = async () => {
       const res = await get("/trainRoute/getAll",{userId})
       if(res.code){
+                console.log(res.data)
+
         setRoutes(res.data)
       }
     }

@@ -21,6 +21,7 @@ import { useAtom } from 'jotai';
 import { tokenAtom, userAtom, userIdAtom } from './atoms/userAtoms';
 import { atomWithStorage } from 'jotai/utils';
 import { useLocation } from 'wouter';
+import { useEffect } from 'react';
 
 const pageAtom = atomWithStorage('dashboard')
 
@@ -33,7 +34,7 @@ const Manager = () => {
   const [,setLocation] = useLocation()
 
   const menuItems = [
-    { id: 'dashboard', label: '运营监控', icon: BarChart3 },
+    // { id: 'dashboard', label: '运营监控', icon: BarChart3 },
     { id: 'stations', label: '车站管理', icon: MapPin },
     { id: 'trains', label: '车辆管理', icon: Train },
     { id: 'routes', label: '路线管理', icon: Route },
@@ -65,6 +66,8 @@ const Manager = () => {
     setLocation("/Login")
 
   }
+
+  useEffect(()=>{})
 
   return (
     <div className="flex h-screen bg-gray-100">
